@@ -92,23 +92,22 @@ class UserResource(ModelResource):
 class TicketResource(ModelResource):
     class Meta:
         queryset = Ticket.objects.all()
-        allowed_methods = ['get', 'post']
+        allowed_methods = ['get', 'post', 'delete']
         resource_name = "ticket"
 
     def prepend_urls(self):
         return [
-            url(r"ticket/(?P<ticketId>\d{0,10})",
-                self.wrap_view('ticket'), name="api_ticket_read"),
             url(r"ticket/create",
                 self.wrap_view('create'), name="api_ticket_create"),
             url(r"ticket/move%s" %
                 trailing_slash(),
                 self.wrap_view('move'), name="api_ticket_move"),
-            url(r"ticket/edit/(?P<ticketId>\d{0,10})$",
+            url(r"ticket/edit/(?P<ticketId>\d{0,5})$",
                 self.wrap_view('edit'), name="api_ticket_edit"),
-            url(r"ticket/delete%s" %
-                trailing_slash(),
-                self.wrap_view('delete'), name="api_ticket_delete")
+            url(r"ticket/delete/(?P<ticketId>\d{0,5})$",
+                self.wrap_view('delete'), name="api_ticket_delete"),
+            url(r"ticket/(?P<ticketId>\d{0,5})",
+                self.wrap_view('ticket'), name="api_ticket_read"),
         ]
 
     def ticket(self, request, ticketId):
@@ -121,7 +120,8 @@ class TicketResource(ModelResource):
             })
         except Ticket.DoesNotExist:
             return self.create_response(request, {
-                'success': False
+                'success': False,
+                'message': 'Ticket does not exist'
             })
 
     def create(self, request):
@@ -159,3 +159,19 @@ class TicketResource(ModelResource):
             'success': True,
             "ticket": model_to_dict(ticket)
         })
+
+    def delete(self, request, ticketId):
+        self.method_check(request, allowed=['delete'])
+        try:
+            ticket = Ticket.objects.get(id=ticketId)
+            ticket.delete()
+            return self.create_response(request, {
+                'success': True,
+                "ticket": model_to_dict(ticket),
+                'message': 'Ticket deleted'
+            })
+        except Ticket.DoesNotExist:
+            return self.create_response(request, {
+                'success': False,
+                'message': 'Ticket does not exist'
+            })

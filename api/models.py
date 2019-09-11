@@ -10,15 +10,17 @@ class User(models.Model):
     password = models.CharField(max_length=128, default="")
 
     def __str__(self):
-        return "%s %s %s" % (self.id, self.username, self.password)
+        return "%s %s" % (self.id, self.username)
 
 
 # Ticket Models
 class Ticket(models.Model):
     id = models.IntegerField
-    description = models.CharField(max_length=400)
+    board = models.IntegerField(default=0)
+    name = models.CharField(max_length=100, default="")
+    description = models.CharField(max_length=400, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20)
 
     def __str__(self):
-        return self.id
+        return "%s %s" % (self.id, self.name)

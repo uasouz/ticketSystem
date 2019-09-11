@@ -1,13 +1,14 @@
-import binascii
 import hashlib
 
 from django.conf.urls import url
+from django.forms import model_to_dict
 from tastypie.http import HttpUnauthorized
 from tastypie.resources import ModelResource
 from tastypie.utils import trailing_slash
 import jwt
 
-from api.models import User
+from api.models import User, Ticket
+
 
 # Login and Signup
 
@@ -24,7 +25,7 @@ class UserResource(ModelResource):
         allowed_methods = ['get', 'post']
         resource_name = "user"
 
-    def override_urls(self):
+    def prepend_urls(self):
         return [
             url(r"login%s" %
                 trailing_slash(),
@@ -84,4 +85,77 @@ class UserResource(ModelResource):
                 'success': True
             })
 
+
 # Tickets
+
+
+class TicketResource(ModelResource):
+    class Meta:
+        queryset = Ticket.objects.all()
+        allowed_methods = ['get', 'post']
+        resource_name = "ticket"
+
+    def prepend_urls(self):
+        return [
+            url(r"ticket/(?P<ticketId>\d{0,10})",
+                self.wrap_view('ticket'), name="api_ticket_read"),
+            url(r"ticket/create",
+                self.wrap_view('create'), name="api_ticket_create"),
+            url(r"ticket/move%s" %
+                trailing_slash(),
+                self.wrap_view('move'), name="api_ticket_move"),
+            url(r"ticket/edit/(?P<ticketId>\d{0,10})$",
+                self.wrap_view('edit'), name="api_ticket_edit"),
+            url(r"ticket/delete%s" %
+                trailing_slash(),
+                self.wrap_view('delete'), name="api_ticket_delete")
+        ]
+
+    def ticket(self, request, ticketId):
+        self.method_check(request, allowed=['get'])
+        try:
+            ticket = Ticket.objects.get(id=ticketId)
+            return self.create_response(request, {
+                'success': True,
+                "ticket": model_to_dict(ticket)
+            })
+        except Ticket.DoesNotExist:
+            return self.create_response(request, {
+                'success': False
+            })
+
+    def create(self, request):
+        self.method_check(request, allowed=['post'])
+
+        data = self.deserialize(request, request.body, format=request.META.get('CONTENT_TYPE', 'application/json'))
+
+        name = data.get('name', '')
+        description = data.get('description', '')
+        board = data.get('board', 0)
+        ticket = Ticket.objects.create(name=name, description=description, board=board)
+        return self.create_response(request, {
+            'success': True,
+            "ticket": model_to_dict(ticket)
+        })
+
+    def edit(self, request, ticketId):
+        self.method_check(request, allowed=['post'])
+
+        data = self.deserialize(request, request.body, format=request.META.get('CONTENT_TYPE', 'application/json'))
+
+        name = data.get('name', '')
+        description = data.get('description', '')
+        board = data.get('board', 0)
+
+        ticket = Ticket.objects.get(id=ticketId)
+        if name != '':
+            ticket.name = name
+        if description != '':
+            ticket.description = description
+        if board != '':
+            ticket.board = board
+        ticket.save()
+        return self.create_response(request, {
+            'success': True,
+            "ticket": model_to_dict(ticket)
+        })

@@ -16,11 +16,13 @@ Including another URLconf
 from django.contrib import admin
 from django.conf.urls import url, include
 from django.urls import path
-from api.resources import UserResource
+from api.resources import UserResource, TicketResource
 
 user_resource = UserResource()
+ticket_resource = TicketResource()
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     url(r'^api/', include(user_resource.urls)),
+    url(r'^api/', include(ticket_resource.urls)),
 ]
